@@ -81,12 +81,14 @@
     min-height:0;
     display:flex;
     justify-content:center;
+    align-items:center;
   }
   #cellules{
     width:100%;
     height:100%;
     display:flex;
     justify-content:center;
+    align-items:center;
   }
 
   /* Plan / cellules */
@@ -102,7 +104,9 @@
   .cellule.actif{
     display:flex;
     flex-direction:column;
-    height:100%;
+    max-width:100%;
+    max-height:100%;
+    margin:auto;
     animation: glisser 0.28s ease;
   }
   @keyframes glisser{
@@ -353,29 +357,39 @@ definitionsCellules.forEach((id, index)=>{
   ajouterOnglet(id, 'Cellule ' + id, index===0);
 });
 
-// Cellules D et H : stockage 10x2 uniquement, pas de quai
-const definitionsSpeciales = [
-  { id:'D', offset:50 },
-  { id:'H', offset:70 }
-];
-definitionsSpeciales.forEach(def=>{
-  const cell = document.createElement('div');
-  cell.className = 'cellule';
-  cell.id = 'cellule-' + def.id;
+// Cellule D+H réunies : deux grilles stockage 10x2, pas de quai
+// Le "remplissage" invisible en flex:5 conserve la même hauteur de case
+// que dans les cellules classiques (5 lignes stockage + 4 lignes quai = 9 unités)
+const cellDH = document.createElement('div');
+cellDH.className = 'cellule';
+cellDH.id = 'cellule-DH';
 
-  const titre = document.createElement('h2');
-  titre.textContent = 'Cellule ' + def.id;
-  cell.appendChild(titre);
+const titreDH = document.createElement('h2');
+titreDH.textContent = 'Cellules D + H';
+cellDH.appendChild(titreDH);
 
-  const titreStock = document.createElement('div');
-  titreStock.className = 'zone-titre';
-  titreStock.textContent = 'Stockage';
-  cell.appendChild(titreStock);
-  cell.appendChild(creerGrilleStockage(10, 2, def.offset, false));
+const titreH = document.createElement('div');
+titreH.className = 'zone-titre';
+titreH.textContent = 'Stockage H';
+cellDH.appendChild(titreH);
+const grilleH = creerGrilleStockage(10, 2, 70, false);
+grilleH.style.flex = '2 1 0';
+cellDH.appendChild(grilleH);
 
-  conteneurCellules.appendChild(cell);
-  ajouterOnglet(def.id, 'Cellule ' + def.id, false);
-});
+const titreD = document.createElement('div');
+titreD.className = 'zone-titre';
+titreD.textContent = 'Stockage D';
+cellDH.appendChild(titreD);
+const grilleD = creerGrilleStockage(10, 2, 50, false);
+grilleD.style.flex = '2 1 0';
+cellDH.appendChild(grilleD);
+
+const remplissage = document.createElement('div');
+remplissage.style.flex = '5 1 0';
+cellDH.appendChild(remplissage);
+
+conteneurCellules.appendChild(cellDH);
+ajouterOnglet('DH', 'Cellules D+H', false);
 
 function updateStats(){
   const total = { c:0, nc:0, hs:0 };
@@ -417,6 +431,31 @@ Object.keys(etatsInitiaux).forEach(id=>{
 });
 
 updateStats();
+
+// Calcule la plus grande taille possible pour la cellule active en conservant
+// le ratio largeur/hauteur (10 colonnes pour 9 unités de hauteur), pour éviter
+// toute déformation quel que soit l'écran ou l'orientation.
+const RATIO = 10/9;
+function ajusterTaille(){
+  const conteneur = document.querySelector('.zone-plan');
+  const w = conteneur.clientWidth;
+  const h = conteneur.clientHeight;
+  let cibleW, cibleH;
+  if (w / h > RATIO){
+    cibleH = h;
+    cibleW = h * RATIO;
+  } else {
+    cibleW = w;
+    cibleH = w / RATIO;
+  }
+  document.querySelectorAll('.cellule').forEach(c=>{
+    c.style.width = cibleW + 'px';
+    c.style.height = cibleH + 'px';
+  });
+}
+window.addEventListener('resize', ajusterTaille);
+window.addEventListener('orientationchange', ()=> setTimeout(ajusterTaille, 150));
+ajusterTaille();
 </script>
 </body>
 </html>
