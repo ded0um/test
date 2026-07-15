@@ -48,32 +48,50 @@
     text-align:center;
   }
 
-  /* Onglets */
-  .onglets{
-    flex:0 0 auto;
+  /* Écran d'accueil : choix de la cellule */
+  .accueil{
+    flex:1 1 auto;
+    min-height:0;
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    grid-auto-rows:1fr;
+    gap:12px;
+  }
+  .bouton-accueil{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    color:var(--ink);
+    font-family:inherit;
+    font-size:1.05rem;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    cursor:pointer;
     display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    margin-bottom:10px;
+    align-items:center;
     justify-content:center;
   }
-  .onglet{
+  .bouton-accueil:hover, .bouton-accueil:active{
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+
+  /* Bouton retour, superposé en haut à gauche de la vue plein écran */
+  .retour{
+    position:absolute;
+    top:6px;
+    left:6px;
+    z-index:5;
     background:var(--panel);
     border:1px solid var(--panel-border);
     color:var(--muted);
     font-family:inherit;
-    font-size:0.75rem;
-    padding:7px 12px;
+    font-size:0.7rem;
+    padding:6px 10px;
     border-radius:6px;
     cursor:pointer;
-    white-space:nowrap;
-    flex:0 0 auto;
   }
-  .onglet.actif{
-    color:var(--accent);
-    border-color:var(--accent);
-    background:#23272f;
-  }
+  .retour:hover{color:var(--accent);border-color:var(--accent);}
 
   /* Zone du plan : occupe tout l'espace restant */
   .zone-plan{
@@ -82,6 +100,7 @@
     display:flex;
     justify-content:center;
     align-items:center;
+    position:relative;
   }
   #cellules{
     width:100%;
@@ -215,13 +234,14 @@
 
   <h1>Contrôle éclairage — Bâtiment 1</h1>
 
-  <div class="onglets" id="onglets"></div>
+  <div class="accueil" id="accueil"></div>
 
-  <div class="zone-plan">
+  <div class="zone-plan" id="zonePlan" style="display:none;">
+    <button id="btnRetour" class="retour">← Cellules</button>
     <div id="cellules"></div>
   </div>
 
-  <div class="stats">
+  <div class="stats" id="statsBar" style="display:none;">
     <div class="stat ok"><b id="cptC">0</b>Conforme (C)</div>
     <div class="stat nok"><b id="cptNC">0</b>Non conforme (NC)</div>
     <div class="stat off"><b id="cptHS">0</b>Neutralisé (noir)</div>
@@ -309,19 +329,33 @@ function creerGrilleQuai(cols, rows, extraDroite){
 }
 
 const conteneurCellules = document.getElementById('cellules');
-const conteneurOnglets = document.getElementById('onglets');
+const conteneurAccueil = document.getElementById('accueil');
+const zonePlan = document.getElementById('zonePlan');
+const accueil = document.getElementById('accueil');
 
-function ajouterOnglet(id, libelle, estPremier){
-  const onglet = document.createElement('button');
-  onglet.className = 'onglet' + (estPremier ? ' actif' : '');
-  onglet.textContent = libelle;
-  onglet.addEventListener('click', ()=>{
-    document.querySelectorAll('.cellule').forEach(c=>c.classList.remove('actif'));
-    document.querySelectorAll('.onglet').forEach(o=>o.classList.remove('actif'));
-    document.getElementById('cellule-'+id).classList.add('actif');
-    onglet.classList.add('actif');
-  });
-  conteneurOnglets.appendChild(onglet);
+const statsBar = document.getElementById('statsBar');
+
+function afficherCellule(id){
+  accueil.style.display = 'none';
+  zonePlan.style.display = 'flex';
+  statsBar.style.display = 'flex';
+  document.querySelectorAll('.cellule').forEach(c=>c.classList.remove('actif'));
+  document.getElementById('cellule-'+id).classList.add('actif');
+  ajusterTaille();
+}
+
+document.getElementById('btnRetour').addEventListener('click', ()=>{
+  zonePlan.style.display = 'none';
+  statsBar.style.display = 'none';
+  accueil.style.display = 'grid';
+});
+
+function ajouterBoutonAccueil(id, libelle){
+  const bouton = document.createElement('button');
+  bouton.className = 'bouton-accueil';
+  bouton.textContent = libelle;
+  bouton.addEventListener('click', ()=> afficherCellule(id));
+  conteneurAccueil.appendChild(bouton);
 }
 
 // Cellules 1 à 6 : stockage 10x5 + quai 9x4
@@ -330,7 +364,6 @@ definitionsCellules.forEach((id, index)=>{
   const cell = document.createElement('div');
   cell.className = 'cellule';
   cell.id = 'cellule-' + id;
-  if(index===0) cell.classList.add('actif');
 
   const titre = document.createElement('h2');
   titre.textContent = 'Cellule ' + id;
@@ -354,7 +387,7 @@ definitionsCellules.forEach((id, index)=>{
   cell.appendChild(flux);
 
   conteneurCellules.appendChild(cell);
-  ajouterOnglet(id, 'Cellule ' + id, index===0);
+  ajouterBoutonAccueil(id, 'Cellule ' + id);
 });
 
 // Cellule D+H réunies : deux grilles stockage 10x2, pas de quai
@@ -389,7 +422,7 @@ remplissage.style.flex = '5 1 0';
 cellDH.appendChild(remplissage);
 
 conteneurCellules.appendChild(cellDH);
-ajouterOnglet('DH', 'Cellules D+H', false);
+ajouterBoutonAccueil('DH', 'Cellules D+H');
 
 function updateStats(){
   const total = { c:0, nc:0, hs:0 };
@@ -441,7 +474,12 @@ function ajusterTaille(){
   const w = conteneur.clientWidth;
   const h = conteneur.clientHeight;
   let cibleW, cibleH;
-  if (w / h > RATIO){
+  if (w <= h){
+    // Portrait (usage principal sur téléphone) : on remplit tout l'espace disponible
+    cibleW = w;
+    cibleH = h;
+  } else if (w / h > RATIO){
+    // Paysage très large : on limite la largeur pour éviter l'écrasement
     cibleH = h;
     cibleW = h * RATIO;
   } else {
