@@ -76,12 +76,20 @@
     color:var(--accent);
   }
 
-  /* Bouton retour, superposé en haut à gauche de la vue plein écran */
-  .retour{
+  /* Barre de navigation en haut de la vue plein écran */
+  .barre-nav{
     position:absolute;
     top:6px;
     left:6px;
+    right:6px;
     z-index:5;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .retour, .nav-lat{
     background:var(--panel);
     border:1px solid var(--panel-border);
     color:var(--muted);
@@ -91,7 +99,10 @@
     border-radius:6px;
     cursor:pointer;
   }
-  .retour:hover{color:var(--accent);border-color:var(--accent);}
+  .retour:hover, .nav-lat:hover{color:var(--accent);border-color:var(--accent);}
+  .nav-lat:disabled{opacity:0.3;cursor:default;}
+  .nav-lat:disabled:hover{color:var(--muted);border-color:var(--panel-border);}
+  .nav-droite{display:flex;gap:6px;}
 
   /* Zone du plan : occupe tout l'espace restant */
   .zone-plan{
@@ -237,7 +248,13 @@
   <div class="accueil" id="accueil"></div>
 
   <div class="zone-plan" id="zonePlan" style="display:none;">
-    <button id="btnRetour" class="retour">← Cellules</button>
+    <div class="barre-nav">
+      <button id="btnRetour" class="retour">← Cellules</button>
+      <div class="nav-droite">
+        <button id="btnPrecedente" class="nav-lat">◄ Précédente</button>
+        <button id="btnSuivante" class="nav-lat">Suivante ►</button>
+      </div>
+    </div>
     <div id="cellules"></div>
   </div>
 
@@ -334,6 +351,13 @@ const zonePlan = document.getElementById('zonePlan');
 const accueil = document.getElementById('accueil');
 
 const statsBar = document.getElementById('statsBar');
+const ordreCellules = ['1','2','3','4','5','6','DH'];
+let indexActuel = 0;
+
+function majBoutonsNav(){
+  document.getElementById('btnPrecedente').disabled = (indexActuel <= 0);
+  document.getElementById('btnSuivante').disabled = (indexActuel >= ordreCellules.length - 1);
+}
 
 function afficherCellule(id){
   accueil.style.display = 'none';
@@ -341,6 +365,8 @@ function afficherCellule(id){
   statsBar.style.display = 'flex';
   document.querySelectorAll('.cellule').forEach(c=>c.classList.remove('actif'));
   document.getElementById('cellule-'+id).classList.add('actif');
+  indexActuel = ordreCellules.indexOf(id);
+  majBoutonsNav();
   ajusterTaille();
 }
 
@@ -348,6 +374,14 @@ document.getElementById('btnRetour').addEventListener('click', ()=>{
   zonePlan.style.display = 'none';
   statsBar.style.display = 'none';
   accueil.style.display = 'grid';
+});
+
+document.getElementById('btnPrecedente').addEventListener('click', ()=>{
+  if(indexActuel > 0) afficherCellule(ordreCellules[indexActuel - 1]);
+});
+
+document.getElementById('btnSuivante').addEventListener('click', ()=>{
+  if(indexActuel < ordreCellules.length - 1) afficherCellule(ordreCellules[indexActuel + 1]);
 });
 
 function ajouterBoutonAccueil(id, libelle){
@@ -373,7 +407,7 @@ definitionsCellules.forEach((id, index)=>{
   titreStock.className = 'zone-titre';
   titreStock.textContent = 'Stockage';
   cell.appendChild(titreStock);
-  cell.appendChild(creerGrilleStockage(10, 5, 0, id===1));
+  cell.appendChild(creerGrilleStockage(10, 5, 0, false));
 
   const titreQuai = document.createElement('div');
   titreQuai.className = 'zone-titre';
